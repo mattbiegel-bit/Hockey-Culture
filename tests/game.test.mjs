@@ -57,6 +57,13 @@ function finishRound(game) {
   return play(game, game.roundDelay + tick * 2);
 }
 
+function humanShot(game, x, y) {
+  Object.assign(game.skaters[0], { x, y, angle: -Math.PI / 2 });
+  Object.assign(game.puck, { owner: 0, lastTouch: 0 });
+  play(game, 0.2);
+  return [...play(game, tick, { ...noInput, shoot: true }), ...play(game, 0.55)];
+}
+
 test('starts a fresh three-minute free-for-all in each difficulty', () => {
   assert.deepEqual(Object.keys(DIFFICULTIES).sort(), ['easy', 'hard', 'normal']);
   for (const difficulty of Object.keys(DIFFICULTIES)) {
@@ -69,6 +76,23 @@ test('starts a fresh three-minute free-for-all in each difficulty', () => {
     assert.ok(game.goalie.y < (RINK.top + RINK.bottom) / 2);
     assert.deepEqual(game.rankings(), [0, 1, 2].map((id) => ({ id, score: 0, rank: 1 })));
   }
+});
+
+test('the half-ice draw and bottom boards keep the skaters and puck in play', () => {
+  const game = createGame();
+  assert.equal(RINK.bottom, 414);
+  assert.ok(game.skaters.every((skater) => !outsideBoards(skater)));
+  assert.ok(!outsideBoards(game.puck));
+  assert.ok(game.puck.y < Math.min(...game.skaters.map(({ y }) => y)));
+
+  const human = game.skaters[0];
+  play(game, 1.3, { ...noInput, y: 1, sprint: true });
+  assert.ok(Math.abs(human.y - (RINK.bottom - human.radius)) < 0.1);
+
+  Object.assign(game.puck, { x: RINK.goalX - 50, y: RINK.bottom - 10, vx: 0, vy: 550, owner: null });
+  const rebound = play(game, 0.1);
+  assert.ok(rebound.some(({ type }) => type === 'board'));
+  assert.ok(game.puck.vy < 0 && !outsideBoards(game.puck));
 });
 
 test('alternate skaters can be selected, and the chosen skater receives the human movement', () => {
@@ -372,14 +396,64 @@ test('human movement, sprint, puck collection, and shooting work through update'
   assert.ok(game.puck.vy < 0);
 });
 
+test('normal skating has a slower pace and carrying applies a small speed penalty', () => {
+  const freeGame = createGame();
+  const carryGame = createGame();
+  const free = freeGame.skaters[0];
+  const carry = carryGame.skaters[0];
+  carryGame.puck.owner = carry.id;
+  const controls = { ...noInput, x: 1 };
+  for (let frame = 0; frame < 120; frame++) {
+    freeGame.steer(free, controls, tick);
+    carryGame.steer(carry, controls, tick);
+  }
+  assert.ok(free.vx > 100 && free.vx < 130);
+  assert.ok(carry.vx > free.vx * 0.9 && carry.vx < free.vx);
+});
+
+test('a human pickup has time to settle before AI contact can dispossess it', () => {
+  const game = createGame();
+  const [human, rival, other] = game.skaters;
+  Object.assign(human, { x: RINK.goalX, y: 267, angle: 0 });
+  Object.assign(rival, { x: human.x + 36, y: human.y, angle: Math.PI, stun: 1.5 });
+  other.stun = 1.5;
+  Object.assign(game.puck, { x: human.x + 8, y: human.y });
+  const pickup = play(game, tick);
+  assert.ok(pickup.some(({ type, player }) => type === 'pickup' && player === human.id));
+  assert.equal(game.puck.owner, human.id);
+  assert.ok(game.puck.controlGrace > 0.5);
+
+  rival.stun = 0;
+  game.poke(rival);
+  assert.equal(game.puck.owner, human.id);
+  rival.action = 'check';
+  game.tryHit(rival, human, { x: -1, y: 0, length: 36 });
+  assert.equal(game.puck.owner, human.id);
+
+  rival.stun = 1.5;
+  play(game, 1);
+  assert.equal(game.puck.controlGrace, 0);
+  rival.stun = 0;
+  game.poke(rival);
+  assert.equal(game.puck.owner, null);
+  assert.ok(game.drainEvents().some(({ type, player, target }) =>
+    type === 'poke' && player === rival.id && target === human.id));
+});
+
 test('the human can beat the goalie by shooting from a flank', () => {
   const game = createGame();
-  Object.assign(game.skaters[0], { x: 220, y: 130, angle: -Math.PI / 2 });
-  Object.assign(game.puck, { owner: 0, lastTouch: 0 });
-  const events = play(game, 0.2, { ...noInput, shoot: true });
+  const events = humanShot(game, RINK.goalX + 44, RINK.goalY + 145);
   assert.ok(events.some(({ type, player }) => type === 'shot' && player === 0));
   assert.ok(events.some(({ type, player }) => type === 'goal' && player === 0));
   assert.deepEqual(game.skaters.map(({ score }) => score), [1, 0, 0]);
+});
+
+test('the goalie can close the short side on an ordinary close-range shot', () => {
+  const game = createGame();
+  const events = humanShot(game, RINK.goalX - 46, RINK.goalY + 57);
+  assert.ok(events.some(({ type, player }) => type === 'shot' && player === 0));
+  assert.ok(events.some(({ type, player }) => type === 'save' && player === 0));
+  assert.deepEqual(game.skaters.map(({ score }) => score), [0, 0, 0]);
 });
 
 test('poke and body checks free a rival’s puck, which can be recovered', () => {
@@ -388,7 +462,7 @@ test('poke and body checks free a rival’s puck, which can be recovered', () =>
     const [human, carrier, third] = game.skaters;
     Object.assign(human, { x: 266, y: 370, angle: 0 });
     Object.assign(carrier, { x: 296, y: human.y, angle: 0 });
-    Object.assign(third, { x: 140, y: 500, stun: 2 });
+    Object.assign(third, { x: 140, y: RINK.bottom - 30, stun: 2 });
     Object.assign(game.puck, { x: 313, y: human.y, owner: carrier.id, lastTouch: carrier.id });
 
     const events = play(game, tick, { ...noInput, [action]: true });
@@ -441,6 +515,18 @@ test('a centered shot produces a goalie save and live rebound', () => {
   assert.ok(!events.some(({ type }) => type === 'goal'));
   assert.equal(game.puck.owner, null);
   assert.ok(game.puck.vy > 0);
+});
+
+test('the goalie tracks the puck across the crease and stays in front of the goal', () => {
+  const game = createGame('hard');
+  game.skaters.forEach((skater) => { skater.stun = 2; });
+  Object.assign(game.puck, { x: RINK.right - 45, y: RINK.goalY + 130 });
+  play(game, 0.35);
+  assert.ok(game.goalie.x > RINK.goalX + 12);
+  Object.assign(game.puck, { x: RINK.left + 45, y: RINK.goalY + 130 });
+  play(game, 0.55);
+  assert.ok(game.goalie.x < RINK.goalX - 12);
+  assert.ok(game.goalie.y >= RINK.goalY && game.goalie.y < RINK.goalY + 48);
 });
 
 test('a fast loose puck bounces off the boards and remains playable', () => {
@@ -535,6 +621,21 @@ test('coach has separate goal reactions for #39', () => {
   assert.notEqual(coach.update(0.1, goal).text, first.text);
   const replacementGoal = coach.update(0.1, [{ type: 'goal', player: 2, number: 44 }]);
   assert.equal(replacementGoal.text, "THAT'S THE WAY!");
+});
+
+test('both signature coach lines recur during quiet play without consecutive repeats', () => {
+  const coach = new Coach({ random: randomWithSeed(37) });
+  const signatures = ["I DON'T KNOW…", 'THEY SEEM NERVOUS…'];
+  const spoken = [];
+  let previous;
+  for (let second = 0; second < 75; second += 0.1) {
+    const line = coach.update(0.1, []);
+    if (line && line !== previous) spoken.push(line.text);
+    previous = line;
+  }
+  for (const line of signatures) assert.ok(spoken.filter((text) => text === line).length >= 2);
+  assert.ok(spoken.filter((line) => signatures.includes(line)).length > spoken.length / 2);
+  assert.ok(spoken.every((line, index) => line !== spoken[index - 1]));
 });
 
 test('the practice clock measures elapsed time when physics steps are capped', () => {

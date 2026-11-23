@@ -1,5 +1,5 @@
 import { DIFFICULTIES, Game } from './game.mjs';
-import { Renderer } from './render.mjs';
+import { Renderer, WORLD_WIDTH, WORLD_HEIGHT } from './render.mjs';
 import { Input } from './input.mjs';
 import { GameAudio } from './audio.mjs';
 import { Coach } from './coach.mjs';
@@ -38,6 +38,9 @@ const goalCall = byId('goal-call');
 const rivalCalls = [byId('rival-call-0'), byId('rival-call-1')];
 const moveCall = byId('move-call');
 const gmCall = byId('gm-call');
+const entrance = byId('entrance');
+const entranceBanner = byId('entrance-banner');
+const fullscreenQuick = byId('fullscreen-quick');
 const touchShoot = byId('touch-shoot');
 const touchSpecial = byId('touch-special');
 const specialHint = byId('special-hint');
@@ -63,9 +66,15 @@ const input = new Input({
   onPause: pause,
 });
 
-const benchGreeting = { text: "LET’S GO, BOYS!", gesture: 'point' };
+const benchGreeting = { text: "THEY SEEM NERVOUS…", gesture: 'point' };
 const effectTypes = new Set(['shot', 'check', 'poke', 'board', 'save', 'goal', 'special', 'michigan-release', 'eject', 'return', 'shake-throw', 'shake-hit']);
 const moveNames = { deke: 'Edge Burst', slapshot: 'Slapshot', michigan: 'Michigan', muffin: 'Wobbly Shot' };
+const entrances = [
+  { id: 0, number: 24, name: 'SEAL Team 6', detail: 'Hardest hits · Edge Burst' },
+  { id: 1, number: 11, name: 'Wingnut', detail: 'Fastest skater · Slapshot' },
+  { id: 2, number: 39, name: 'The Russian', detail: 'Puck protection · Michigan' },
+];
+const entranceSeconds = 1.65;
 let screen = 'menu';
 let discoveredTouch = false;
 let displaySeconds = -1;
@@ -79,6 +88,9 @@ let moveAge = 0;
 let effects = [];
 let frameTime;
 let activeTime = 0;
+let entranceTime = 0;
+let entrantIndex = -1;
+let lastEntranceCue = -1;
 let lastMenuDraw = -Infinity;
 let redraw = true;
 
@@ -110,8 +122,12 @@ const fullscreenSupported = Boolean(document.fullscreenEnabled && document.docum
 
 function updateFullscreen() {
   const active = Boolean(document.fullscreenElement);
+  const label = active ? 'Exit fullscreen' : 'Fullscreen';
+  app.classList.toggle('is-fullscreen', active);
   byId('fullscreen-setting').setAttribute('aria-checked', String(active));
-  byId('fullscreen-quick').setAttribute('aria-pressed', String(active));
+  fullscreenQuick.setAttribute('aria-pressed', String(active));
+  fullscreenQuick.setAttribute('aria-label', label);
+  fullscreenQuick.lastElementChild.textContent = label;
 }
 
 async function toggleFullscreen() {
@@ -140,13 +156,15 @@ function setScreen(next) {
   byId('menu').hidden = next !== 'menu';
   byId('hud').hidden = next === 'menu';
   byId('pause-quick').hidden = next !== 'playing';
+  entrance.hidden = next !== 'intro';
   input.clear();
   input.enabled = next === 'playing';
-  if (next === 'playing') frameTime = performance.now();
-  else audio.suspendSkate();
+  if (next === 'playing' || next === 'intro') frameTime = performance.now();
+  if (next !== 'playing') audio.suspendSkate();
 
   const status = {
     menu: ['ready', 'Ready'],
+    intro: ['intro', 'Entrances'],
     playing: ['live', 'Live'],
     paused: ['paused', 'Paused'],
     results: ['final', 'Final'],
@@ -171,7 +189,7 @@ function clearPracticeOverlays() {
   coach.reset();
 }
 
-function startPractice() {
+function startPractice(showIntro = true) {
   pauseDialog.close();
   resultsDialog.close();
   audio.unlock();
@@ -180,8 +198,46 @@ function startPractice() {
   clearPracticeOverlays();
   coachLine = null;
   byId('announcement').textContent = '';
-  setScreen('playing');
   updateScoreboard();
+  if (showIntro) {
+    entranceTime = 0;
+    lastEntranceCue = -1;
+    setScreen('intro');
+    showEntrance(0);
+    byId('skip-intro').focus({ preventScroll: true });
+  } else {
+    beginPlay();
+  }
+}
+
+function showEntrance(index) {
+  entrantIndex = index;
+  const entrant = entrances[index];
+  entrance.dataset.entrant = entrant.number;
+  byId('entrance-number').textContent = `#${entrant.number}${entrant.id === game.humanId ? ' · You' : ''}`;
+  byId('entrance-name').textContent = entrant.name;
+  byId('entrance-detail').textContent = entrant.detail;
+  animate(entranceBanner);
+}
+
+function updateEntrance(elapsed) {
+  entranceTime += elapsed;
+  const index = Math.floor(entranceTime / entranceSeconds);
+  if (index >= entrances.length) {
+    beginPlay();
+    return;
+  }
+  if (index !== entrantIndex) showEntrance(index);
+  if (index !== lastEntranceCue && entranceTime - index * entranceSeconds >= .18) {
+    audio.event({ type: 'entrance', player: entrances[index].id });
+    lastEntranceCue = index;
+  }
+  redraw = true;
+}
+
+function beginPlay() {
+  setScreen('playing');
+  audio.event({ type: 'faceoff' });
   byId('pause-quick').focus({ preventScroll: true });
 }
 
@@ -329,8 +385,8 @@ function showRivalCalls() {
     const side = white.x === black.x ? (index === 0 ? -1 : 1) : (skater.x < center ? -1 : 1);
     const x = neighbors ? center + side * 44 : skater.x;
     const bubble = rivalCalls[index];
-    bubble.style.left = `${Math.min(94, Math.max(6, x / 574 * 100))}%`;
-    bubble.style.top = `${Math.min(96, Math.max(10, (skater.y - 20) / 608 * 100))}%`;
+    bubble.style.left = `${Math.min(94, Math.max(6, x / WORLD_WIDTH * 100))}%`;
+    bubble.style.top = `${Math.min(96, Math.max(10, (skater.y - 20) / WORLD_HEIGHT * 100))}%`;
     bubble.hidden = false;
     animate(bubble);
   });
@@ -348,8 +404,8 @@ function refreshManagerBubble() {
     gmCall.hidden = true;
     return;
   }
-  gmCall.style.left = `${Math.min(87, manager.x / 574 * 100)}%`;
-  gmCall.style.top = `${(manager.y - 23) / 608 * 100}%`;
+  gmCall.style.left = `${Math.min(87, manager.x / WORLD_WIDTH * 100)}%`;
+  gmCall.style.top = `${(manager.y - 23) / WORLD_HEIGHT * 100}%`;
   if (gmCall.hidden) {
     gmCall.hidden = false;
     animate(gmCall);
@@ -422,6 +478,8 @@ function frame(now) {
     updateScoreboard();
     if (game.finished) showResults();
     redraw = true;
+  } else if (screen === 'intro' && !document.hidden) {
+    updateEntrance(elapsed);
   } else if (screen === 'menu' && now - lastMenuDraw > 50) {
     lastMenuDraw = now;
     redraw = true;
@@ -429,15 +487,24 @@ function frame(now) {
 
   if (redraw) {
     refreshCoachBubble();
-    renderer.draw(game, { time: screen === 'menu' ? now / 1000 : activeTime, coach: coachLine, effects });
+    const introTime = entranceTime % entranceSeconds;
+    renderer.draw(game, {
+      time: screen === 'menu' ? now / 1000 : screen === 'intro' ? introTime : activeTime,
+      coach: coachLine,
+      effects,
+      entrance: screen === 'intro' ? { ...entrances[entrantIndex], elapsed: introTime } : null,
+    });
     redraw = false;
   }
   requestAnimationFrame(frame);
 }
 
-byId('play').addEventListener('click', startPractice);
-byId('again').addEventListener('click', startPractice);
-byId('restart').addEventListener('click', startPractice);
+byId('play').addEventListener('click', () => startPractice());
+byId('again').addEventListener('click', () => startPractice());
+byId('restart').addEventListener('click', () => startPractice(false));
+byId('skip-intro').addEventListener('click', () => {
+  if (screen === 'intro') beginPlay();
+});
 byId('pause-quick').addEventListener('click', pause);
 byId('pause').addEventListener('click', pause);
 byId('resume').addEventListener('click', resume);
@@ -474,12 +541,23 @@ for (const id of ['fullscreen-quick', 'fullscreen-setting']) {
 }
 byId('fullscreen-note').hidden = fullscreenSupported;
 document.addEventListener('fullscreenchange', updateFullscreen);
+document.addEventListener('keydown', (event) => {
+  if (event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+  if (event.code === 'Escape' && screen === 'intro') {
+    event.preventDefault();
+    beginPlay();
+  } else if (event.code === 'KeyF' && !event.target.closest?.('input, textarea, select, [contenteditable]')) {
+    event.preventDefault();
+    toggleFullscreen();
+  }
+});
 pauseDialog.addEventListener('cancel', (event) => {
   event.preventDefault();
   resume();
 });
 resultsDialog.addEventListener('cancel', (event) => event.preventDefault());
 document.addEventListener('visibilitychange', () => {
+  if (screen === 'intro') frameTime = performance.now();
   if (document.hidden) pause();
 });
 document.addEventListener('pointerdown', (event) => {

@@ -11,6 +11,10 @@ const LINES = {
     ['SHOOT THE PUCK!', 'point'],
     ['FOLLOW YOUR SHOT!', 'point'],
   ],
+  skeptical: [
+    ["I DON'T KNOW…", 'lean'],
+    ['THEY SEEM NERVOUS…', 'lean'],
+  ],
   goal: [
     ["THAT'S THE WAY!", 'raise'],
     ['THAT ONE COUNTS!', 'raise'],
@@ -78,10 +82,16 @@ export class Coach {
     this.quietUntil = 0.28;
     this.idleTime = 0;
     this.greeting = true;
+    this.observations = 0;
   }
 
   speak(type) {
-    const pool = LINES[type];
+    let pool = LINES[type];
+    const recurring = (type === 'battle' || type === 'idle') && this.lastType.has(type);
+    if (type === 'general' || recurring) {
+      if (this.observations % 3 !== 2) pool = LINES.skeptical;
+      this.observations += 1;
+    }
     const unused = pool.filter(([text]) => !this.lastPhrases.includes(text));
     const options = unused.length ? unused : pool.filter(([text]) => text !== this.lastPhrases.at(-1));
     const candidates = options.length ? options : pool;

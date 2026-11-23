@@ -1,6 +1,12 @@
 # 3 FOR ALL — Hockey Practice
 
-Welcome to Phylers Culture. Pick #24 in white, #11 in black, or #39 in orange. The other two skaters compete as independent AI rivals. All three shoot on the same goalie.
+Welcome to Phylers Culture. Pick a skater, then watch or skip the three wrestling-style entrances before the draw on half ice. The other two skaters compete as independent AI rivals. All three shoot on the same goalie.
+
+| Skater | Entrance name |
+| --- | --- |
+| #11 in black | Wingnut |
+| #24 in white | SEAL Team 6 |
+| #39 in orange | The Russian |
 
 ## Practice modes
 
@@ -28,8 +34,11 @@ There is no package installation or build step. Use a static server because the 
 | Skate boost | Hold Shift | Hold Boost |
 | Special | L | Special |
 | Pause | Esc | Pause |
+| Fullscreen | F | Fullscreen |
 
-Skate toward the net to aim. Shoot while skating diagonally to target that side of the goal. Poke the puck away with your stick or close the gap for a body check. Follow shots for rebounds. On a tablet, rotate to landscape and steer with your left thumb while using the action buttons with your right. Settings offers three difficulty levels, sound, and fullscreen where the browser supports it.
+Skate toward the net to aim. Shoot while skating diagonally to target that side of the goal. Skaters move more slowly with the puck, so take a moment to turn into open ice. Poke the puck away with your stick or close the gap for a body check. Follow shots for rebounds.
+
+On a tablet, rotate to landscape and steer with your left thumb while using the action buttons with your right. Use Fullscreen to enlarge the rink when your browser supports it. Settings offers three difficulty levels and a sound toggle.
 
 ## Special moves
 
@@ -40,7 +49,7 @@ Each skater has a charge meter on the scoreboard.
 - #39 skates a little slower and can sometimes hold the puck through a check. For a Michigan, use Special with a full meter and the puck to lift it, then press Shoot to throw it at the net.
 - #44 is a tall, slow, left-handed skater with a weak shot. His charged Wobbly Shot uses the Special button.
 
-Watch the bench for the coach’s protein shakes, which can knock #39 down. When #39 scores, the other two have something to say about it. The orange mascot stays outside the boards and returns skaters who get checked out of the rink.
+Listen for the coach’s “I don’t know…” and “They seem nervous…” from the bench. His protein shakes can knock #39 down. When #39 scores, the other two have something to say about it. The orange mascot stays outside the boards and returns skaters who get checked out of the rink.
 
 ## Publish on GitHub Pages
 
@@ -63,7 +72,7 @@ The game uses relative file paths so it can run under the repository path or at 
 | `src/coach.mjs` | Coach dialogue, gestures, and timing |
 | `src/main.mjs` | App state, rendering loop, and simulation events |
 
-Artwork is drawn in Canvas. Barlow fonts are distributed under the [SIL Open Font License](assets/OFL-Barlow.txt). The sound effects are generated in the browser.
+Artwork is drawn in Canvas. The entrance music and sound effects are generated in the browser. Barlow fonts are distributed under the [SIL Open Font License](assets/OFL-Barlow.txt).
 
 ## Run the tests
 
@@ -73,4 +82,4 @@ The tests use Node.js 20 or later and the built-in Node test runner.
 node --test
 ```
 
-The automated tests cover skater selection, the timed and race modes, #39’s substitution and manual Michigan, the special moves, puck battles, goalie rebounds, mascot returns, protein-shake impacts, and coach dialogue timing.
+The automated tests cover skater selection, the timed and race modes, #39’s substitution and manual Michigan, the special moves, half-ice boundaries, puck battles, goalie reactions and rebounds, mascot returns, protein-shake impacts, and coach dialogue timing.

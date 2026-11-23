@@ -2,7 +2,7 @@ export const RINK = Object.freeze({
   left: 99,
   right: 433,
   top: 39,
-  bottom: 573,
+  bottom: 414,
   goalX: 266,
   goalY: 73,
   goalWidth: 76,
@@ -11,29 +11,38 @@ export const RINK = Object.freeze({
 });
 
 export const DIFFICULTIES = Object.freeze({
-  easy: Object.freeze({ speed: 115, reaction: 0.27, pressure: 0.53, shotSpeed: 478, accuracy: 19, goalieSpeed: 91, goalieRead: 0.17, goalieDelay: 0.14, goaliePad: -2 }),
-  normal: Object.freeze({ speed: 139, reaction: 0.15, pressure: 0.75, shotSpeed: 550, accuracy: 13, goalieSpeed: 136, goalieRead: 0.37, goalieDelay: 0.11, goaliePad: -1 }),
-  hard: Object.freeze({ speed: 164, reaction: 0.09, pressure: 0.94, shotSpeed: 610, accuracy: 9, goalieSpeed: 174, goalieRead: 0.51, goalieDelay: 0.09, goaliePad: 0 }),
+  easy: Object.freeze({
+    paceOffset: -5, reaction: 0.44, pressure: 0.30, shotBoost: -20, accuracy: 19,
+    goalieSpeed: 107, goalieRead: 0.27, goalieDelay: 0.14, goaliePad: -2,
+  }),
+  normal: Object.freeze({
+    paceOffset: 0, reaction: 0.32, pressure: 0.44, shotBoost: 0, accuracy: 13,
+    goalieSpeed: 162, goalieRead: 0.46, goalieDelay: 0.105, goaliePad: -1,
+  }),
+  hard: Object.freeze({
+    paceOffset: 4, reaction: 0.21, pressure: 0.61, shotBoost: 20, accuracy: 9,
+    goalieSpeed: 199, goalieRead: 0.57, goalieDelay: 0.10, goaliePad: 0,
+  }),
 });
 
 export const SKATER_PROFILES = Object.freeze([
   Object.freeze({
     number: 24, color: 'white', handedness: 'left', radius: 13.2, mass: 1.14,
-    pace: 151, boost: 1.30, checkStrength: 1.28, shotSpeed: 555, accuracy: 13, holdChance: 0, move: 'deke',
+    pace: 120, boost: 1.29, checkStrength: 1.28, shotSpeed: 440, accuracy: 13, holdChance: 0, move: 'deke',
   }),
   Object.freeze({
     number: 11, color: 'black', handedness: 'right', radius: 12, mass: 1,
-    pace: 174, boost: 1.28, checkStrength: 0.91, shotSpeed: 625, accuracy: 8, holdChance: 0, move: 'slapshot',
+    pace: 139, boost: 1.26, checkStrength: 0.91, shotSpeed: 500, accuracy: 8, holdChance: 0, move: 'slapshot',
   }),
   Object.freeze({
     number: 39, color: 'orange', handedness: 'left', radius: 12.5, mass: 1.23,
-    pace: 145, boost: 1.24, checkStrength: 1.03, shotSpeed: 595, accuracy: 10, holdChance: 0.34, move: 'michigan',
+    pace: 115, boost: 1.24, checkStrength: 1.03, shotSpeed: 475, accuracy: 10, holdChance: 0.34, move: 'michigan',
   }),
 ]);
 
 export const SUBSTITUTE_PROFILE = Object.freeze({
   number: 44, color: 'orange', handedness: 'left', radius: 14.2, mass: 1.27,
-  pace: 116, boost: 1.17, checkStrength: 0.82, shotSpeed: 434, accuracy: 20, holdChance: 0, move: 'muffin',
+  pace: 94, boost: 1.17, checkStrength: 0.82, shotSpeed: 350, accuracy: 20, holdChance: 0, move: 'muffin',
 });
 
 const MATCH_SECONDS = 180;
@@ -43,9 +52,10 @@ const GOALIE_RADIUS = 15;
 const GOAL_LEFT = RINK.goalX - RINK.goalWidth / 2;
 const GOAL_RIGHT = RINK.goalX + RINK.goalWidth / 2;
 const GOAL_BACK = RINK.goalY - RINK.goalDepth;
-const STARTS = [[266, 429], [175, 399], [357, 399]];
-const COACH = { x: 471, y: 292 };
-const TRACK = { left: 65, right: 531, top: 19, bottom: 591 };
+const STARTS = [[266, 353], [175, 331], [357, 331]];
+const COACH = { x: 471, y: 212 };
+const BENCH_GATE_Y = 289;
+const TRACK = { left: 65, right: 531, top: 19, bottom: 429 };
 const TRACK_WIDTH = TRACK.right - TRACK.left;
 const TRACK_HEIGHT = TRACK.bottom - TRACK.top;
 const TRACK_LENGTH = 2 * (TRACK_WIDTH + TRACK_HEIGHT);
@@ -126,17 +136,17 @@ function newSkater(id, previous, profile = previous?.profile ?? SKATER_PROFILES[
     specialCharge: previous?.profile === profile ? previous.specialCharge : 0,
     vx: 0, vy: 0, angle: -Math.PI / 2,
     stun: 0, action: null, actionTime: 0,
-    pokeCooldown: 0, checkCooldown: 0, pickupCooldown: 0,
+    pokeCooldown: 0, checkCooldown: 0, pickupCooldown: 0, shotCooldown: 0,
     carryTime: 0, decisionTime: 0, pokeNext: false, checkNext: false,
     checkHit: false, specialTime: 0, specialAge: 0, specialRelease: false,
     ejection: null, departing: false,
   };
 }
 
-function newPuck(x = RINK.goalX, y = 334) {
+function newPuck(x = RINK.goalX, y = 273) {
   return {
     x, y, vx: 0, vy: 0, radius: PUCK_RADIUS, height: 0,
-    owner: null, lastTouch: null, shotBy: null, shotOriginX: null, shotAge: 0, pickupDelay: 0,
+    owner: null, lastTouch: null, shotBy: null, shotOriginX: null, shotAge: 0, pickupDelay: 0, controlGrace: 0,
     flightTime: 0, flightDuration: 0, wobble: 0,
   };
 }
@@ -181,7 +191,7 @@ export class Game {
     // Vary later drops across neutral ice to give all three skaters a fair race.
     this.puck = this.round === 0
       ? newPuck()
-      : newPuck(RINK.goalX + (this.random() * 2 - 1) * 85, 321 + this.random() * 32);
+      : newPuck(RINK.goalX + (this.random() * 2 - 1) * 85, 258 + this.random() * 24);
     this.round += 1;
     this.roundDelay = 0;
     this.lastScorer = null;
@@ -251,6 +261,7 @@ export class Game {
     }
 
     this.puck.pickupDelay = Math.max(0, this.puck.pickupDelay - dt);
+    this.puck.controlGrace = Math.max(0, this.puck.controlGrace - dt);
     this.puck.shotAge += dt;
     for (const skater of this.skaters) {
       if (skater.ejection) continue;
@@ -265,7 +276,7 @@ export class Game {
         if (!winding) {
           if (commands.check) this.startCheck(skater);
           if (commands.poke) this.poke(skater);
-          if (commands.shoot && this.puck.owner === skater.id &&
+          if (commands.shoot && this.puck.owner === skater.id && skater.shotCooldown <= 0 &&
               (human || skater.move !== 'deke' || skater.specialTime < 0.37)) this.shoot(skater, commands);
         }
       } else {
@@ -293,6 +304,7 @@ export class Game {
     skater.pokeCooldown = Math.max(0, skater.pokeCooldown - dt);
     skater.checkCooldown = Math.max(0, skater.checkCooldown - dt);
     skater.pickupCooldown = Math.max(0, skater.pickupCooldown - dt);
+    skater.shotCooldown = Math.max(0, skater.shotCooldown - dt);
     skater.decisionTime = Math.max(0, skater.decisionTime - dt);
     this.addCharge(skater, CHARGE_RATE * dt);
     skater.carryTime = this.puck.owner === skater.id ? skater.carryTime + dt : 0;
@@ -320,8 +332,8 @@ export class Game {
       const direction = unit(controls.x || 0, controls.y || 0);
       if (direction.length > 0.1) skater.angle = Math.atan2(direction.y, direction.x);
       const front = face(skater);
-      skater.vx = front.x * 244;
-      skater.vy = front.y * 244;
+      skater.vx = front.x * 194;
+      skater.vy = front.y * 194;
     }
     this.emit('special', skater, { player: skater.id, number: skater.number, move });
     return true;
@@ -354,13 +366,13 @@ export class Game {
     if (deking && direction.length < 0.1) direction = { ...face(skater), length: 1 };
     const power = Math.min(1, direction.length);
     const { profile } = skater;
-    const ease = skater.id === this.humanId ? 0 : (this.settings.speed - DIFFICULTIES.normal.speed) * 0.18;
+    const ease = skater.id === this.humanId ? 0 : this.settings.paceOffset;
     const pace = profile.pace + ease;
     const carrying = this.puck.owner === skater.id;
     const boost = commands.sprint ? profile.boost - (carrying ? 0.06 : 0) : 1;
     const strength = skater.action === 'check' ? 3.1 : power > 0 ? 11.5 + ease * 0.43 : 6.9;
     const movePace = skater.specialTime > 0 ? (deking ? 1.66 / boost : 0.64) : 1;
-    const carryPace = skater.number === 39 ? 0.92 : 0.89;
+    const carryPace = skater.number === 39 ? 0.95 : 0.93;
     const speed = pace * boost * (carrying ? carryPace : 1) * power * movePace;
     const blend = 1 - Math.exp(-strength * dt);
     skater.vx += (direction.x * speed - skater.vx) * blend;
@@ -475,7 +487,7 @@ export class Game {
 
   startSubstitution(skater) {
     const manager = {
-      x: 563, y: 375, angle: Math.PI, action: 'walk', phase: 'enter', age: 0,
+      x: 563, y: BENCH_GATE_Y + 8, angle: Math.PI, action: 'walk', phase: 'enter', age: 0,
       playerX: skater.x, playerY: skater.y,
     };
     this.manager = manager;
@@ -496,18 +508,18 @@ export class Game {
     if (manager.age < 0.95) {
       const walk = manager.age / 0.95;
       manager.x = 563 - walk * 96;
-      manager.y = 375 - walk * 5;
+      manager.y = BENCH_GATE_Y + 8 - walk * 5;
       return;
     }
 
     if (manager.age < 2.47) {
-      Object.assign(manager, { phase: 'dismiss', action: 'point', x: 467, y: 370, angle: Math.PI });
+      Object.assign(manager, { phase: 'dismiss', action: 'point', x: 467, y: BENCH_GATE_Y + 3, angle: Math.PI });
       const approach = clamp((manager.age - 1.25) / 0.83, 0, 1);
       const gate = clamp((manager.age - 2.08) / 0.39, 0, 1);
       if (approach === 0) return;
       skater.departing = true;
       const dx = 414 - manager.playerX;
-      const dy = 367 - manager.playerY;
+      const dy = BENCH_GATE_Y - manager.playerY;
       skater.x = manager.playerX + dx * approach + 39 * gate;
       skater.y = manager.playerY + dy * approach;
       skater.angle = gate > 0 ? 0 : Math.atan2(dy, dx);
@@ -515,9 +527,9 @@ export class Game {
     }
 
     const exit = clamp((manager.age - 2.47) / (SUBSTITUTION_SECONDS - 2.47), 0, 1);
-    Object.assign(manager, { phase: 'escort', action: 'walk', x: 467 + 122 * exit, y: 370, angle: 0 });
+    Object.assign(manager, { phase: 'escort', action: 'walk', x: 467 + 122 * exit, y: BENCH_GATE_Y + 3, angle: 0 });
     skater.x = 453 + 118 * exit;
-    skater.y = 367;
+    skater.y = BENCH_GATE_Y;
     skater.angle = 0;
   }
 
@@ -531,7 +543,7 @@ export class Game {
     const { profile } = target;
     const carrying = this.puck.owner === target.id;
     const boost = commands.sprint ? profile.boost : 1;
-    const pace = target.stun > 0 ? 0 : profile.pace * boost * (carrying ? 0.92 : 1);
+    const pace = target.stun > 0 ? 0 : profile.pace * boost * (carrying ? 0.95 : 1);
     const momentum = (1 - Math.exp(-11.5 * duration)) / 11.5;
     const travel = Math.min(planned.length, 1) * pace * (duration - momentum) * 0.86;
     const toX = clamp(target.x + target.vx * momentum + planned.x * travel, RINK.left + 10, RINK.right - 8);
@@ -595,10 +607,11 @@ export class Game {
     let poke = false;
     let check = false;
     let special = false;
+    let pursuitPace = 1;
 
     if (opponent === skater) {
       const lane = RINK.goalX + side * 61;
-      targetX = skater.y > 238 ? lane : RINK.goalX + side * 40;
+      targetX = skater.y > 201 ? lane : RINK.goalX + side * 43;
       targetY = 125;
       if (skater.y < 123) {
         targetX = RINK.goalX + (Math.sign(skater.x - RINK.goalX) || side) * 73;
@@ -606,28 +619,30 @@ export class Game {
       }
       const shotDistance = skater.y - RINK.goalY;
       const clearEnough = Math.abs(skater.x - RINK.goalX) < (shotDistance < 143 ? 108 : 76);
-      const chargeReady = skater.specialCharge >= 1;
+      const chargeReady = skater.specialCharge >= 1 && skater.shotCooldown === 0;
       if (chargeReady && skater.carryTime > 0.12 && clearEnough) {
         special = skater.move === 'michigan'
           ? shotDistance > 25 && shotDistance < 125 && Math.abs(skater.x - RINK.goalX) < 86
-          : shotDistance > 39 && shotDistance < 205;
+          : shotDistance > 39 && shotDistance < 161;
       }
       const savingForMichigan = chargeReady && skater.move === 'michigan' && shotDistance > 125;
-      if (!special && !savingForMichigan && skater.carryTime > settings.reaction + 0.13 &&
-          clearEnough && shotDistance > 29 && shotDistance < (this.difficulty === 'easy' ? 136 : 170)) {
+      if (!special && !savingForMichigan && skater.carryTime > settings.reaction + 0.41 &&
+          clearEnough && shotDistance > 29 && shotDistance < (this.difficulty === 'easy' ? 118 : 137)) {
         shoot = true;
       }
     } else if (opponent) {
       const gap = Math.hypot(opponent.x - skater.x, opponent.y - skater.y);
-      targetX = opponent.x + opponent.vx * 0.13 + (gap > 47 ? side * 17 : 0);
-      targetY = opponent.y + opponent.vy * 0.13;
-      if (decide && gap < 52 && skater.decisionTime === 0) {
+      const settling = puck.controlGrace > 0;
+      targetX = opponent.x + opponent.vx * 0.09 + side * (settling ? 30 : gap > 46 ? 16 : 0);
+      targetY = opponent.y + opponent.vy * 0.09 + (settling ? 20 : 0);
+      pursuitPace = settling ? 0.76 : 0.89;
+      if (!settling && decide && gap < 49 && skater.decisionTime === 0) {
         skater.decisionTime = settings.reaction;
         skater.pokeNext = this.random() < settings.pressure;
-        skater.checkNext = this.random() < settings.pressure * 0.56;
+        skater.checkNext = this.random() < settings.pressure * 0.47;
       }
-      check = gap < 35 && skater.checkNext && skater.checkCooldown === 0;
-      poke = !check && gap < 42 && skater.pokeNext && skater.pokeCooldown === 0;
+      check = !settling && gap < 33 && skater.checkNext && skater.checkCooldown === 0;
+      poke = !settling && !check && gap < 36 && skater.pokeNext && skater.pokeCooldown === 0;
       if (decide && check) skater.checkNext = false;
       if (decide && poke) skater.pokeNext = false;
     } else {
@@ -656,7 +671,10 @@ export class Game {
       steerX += away.x * strength;
       steerY += away.y * strength;
     }
-    return { x: steerX, y: steerY, shoot, poke, check, special, sprint: direction.length > 95 && opponent !== skater };
+    return {
+      x: steerX * pursuitPace, y: steerY * pursuitPace, shoot, poke, check, special,
+      sprint: opponent === null && direction.length > 108,
+    };
   }
 
   resolveSkaters() {
@@ -697,18 +715,19 @@ export class Game {
   startCheck(skater) {
     if (skater.checkCooldown > 0 || skater.specialTime > 0) return;
     const { checkStrength } = skater.profile;
-    skater.checkCooldown = 1.04;
+    skater.checkCooldown = 1.21;
     skater.action = 'check';
     skater.actionTime = 0.26;
     skater.checkHit = false;
     const front = face(skater);
-    skater.vx += front.x * 93 * checkStrength;
-    skater.vy += front.y * 93 * checkStrength;
+    skater.vx += front.x * 72 * checkStrength;
+    skater.vy += front.y * 72 * checkStrength;
   }
 
   tryHit(skater, rival, direction) {
     const front = face(skater);
     if (skater.action !== 'check' || skater.checkHit || skater.ejection || rival.ejection ||
+        (this.puck.owner === rival.id && this.puck.controlGrace > 0 && skater.id !== this.humanId) ||
         direction.x * front.x + direction.y * front.y < 0.30) return;
 
     skater.checkHit = true;
@@ -721,11 +740,11 @@ export class Game {
     rival.stun = 0.49 * checkStrength;
     rival.action = 'stun';
     rival.actionTime = rival.stun;
-    rival.vx = direction.x * 160 * impact + skater.vx * 0.25;
-    rival.vy = direction.y * 160 * impact + skater.vy * 0.25;
+    rival.vx = direction.x * 129 * impact + skater.vx * 0.25;
+    rival.vy = direction.y * 129 * impact + skater.vy * 0.25;
     if (this.puck.owner === rival.id && !retained) {
       this.setStickPosition(rival);
-      this.release(direction.x * 179, direction.y * 179, 0.13);
+      this.release(direction.x * 134, direction.y * 134, 0.13);
       rival.pickupCooldown = rival.stun;
     }
     this.emit('check', rival, { player: skater.id, target: rival.id, retained });
@@ -734,10 +753,11 @@ export class Game {
 
   poke(skater) {
     if (skater.pokeCooldown > 0 || skater.action === 'check' || this.puck.owner === skater.id) return;
-    skater.pokeCooldown = 0.52;
+    const owner = this.skaters[this.puck.owner];
+    if (owner && this.puck.controlGrace > 0 && skater.id !== this.humanId) return;
+    skater.pokeCooldown = 0.68;
     skater.action = 'poke';
     skater.actionTime = 0.24;
-    const owner = this.skaters[this.puck.owner];
     const front = face(skater);
     const target = owner || this.puck;
     const gap = unit(target.x - skater.x, target.y - skater.y);
@@ -749,7 +769,7 @@ export class Game {
       owner.pickupCooldown = 0.38;
       owner.stun = Math.max(0.12, owner.stun);
     }
-    this.release(front.x * 132 + skater.vx * 0.2, front.y * 132 + skater.vy * 0.2, 0.09);
+    this.release(front.x * 100 + skater.vx * 0.2, front.y * 100 + skater.vy * 0.2, 0.09);
     this.puck.lastTouch = skater.id;
     this.addCharge(skater, 0.035);
     this.emit('poke', this.puck, { player: skater.id, target: owner?.id });
@@ -776,8 +796,8 @@ export class Game {
       const offset = side * 30 + (this.random() * 2 - 1) * spread;
       heading = unit(RINK.goalX + offset - this.puck.x, RINK.goalY - 3 - this.puck.y);
     }
-    const settingBoost = human ? 0 : (this.settings.shotSpeed - DIFFICULTIES.normal.shotSpeed) * 0.38;
-    const specialSpeeds = { slapshot: 875, michigan: 654, muffin: 478 };
+    const settingBoost = human ? 0 : this.settings.shotBoost;
+    const specialSpeeds = { slapshot: 700, michigan: 526, muffin: 385 };
     const speed = specialSpeeds[move] ?? profile.shotSpeed + settingBoost;
     this.release(heading.x * speed, heading.y * speed, 0.21);
     if (skater.move === 'deke') skater.specialTime = 0;
@@ -786,6 +806,7 @@ export class Game {
     this.puck.shotAge = 0;
     this.puck.lastTouch = skater.id;
     skater.pickupCooldown = 0.34;
+    skater.shotCooldown = human ? 0.44 : 1.82;
     skater.action = move || 'shot';
     skater.actionTime = move ? 0.37 : 0.31;
     if (move === 'michigan') {
@@ -799,7 +820,7 @@ export class Game {
 
   release(vx, vy, delay) {
     Object.assign(this.puck, {
-      owner: null, vx, vy, pickupDelay: delay, shotBy: null,
+      owner: null, vx, vy, pickupDelay: delay, controlGrace: 0, shotBy: null,
       height: 0, flightTime: 0, flightDuration: 0, wobble: 0,
     });
   }
@@ -826,16 +847,18 @@ export class Game {
     if (goalie.actionTime === 0) goalie.action = null;
 
     const trackX = puck.shotBy !== null && puck.shotOriginX !== null ? puck.shotOriginX : puck.x;
-    let target = RINK.goalX + (trackX - RINK.goalX) * (puck.y < 230 ? 0.32 : 0.19);
+    const angleCoverage = clamp(0.28 + (222 - puck.y) * 0.0012, 0.19, 0.40);
+    let target = RINK.goalX + (trackX - RINK.goalX) * angleCoverage;
     if (puck.shotBy !== null && puck.shotAge > settings.goalieDelay &&
-        puck.vy < -110 && puck.y > goalie.y && puck.y < 249) {
+        puck.vy < -94 && puck.y > goalie.y && puck.y < 261) {
       const prediction = puck.x + puck.vx * (goalie.y - puck.y) / puck.vy;
       target += (clamp(prediction, GOAL_LEFT - 14, GOAL_RIGHT + 14) - target) * settings.goalieRead;
     }
-    target = clamp(target, RINK.goalX - 29, RINK.goalX + 29);
-    const targetY = 86 + clamp((225 - puck.y) / 17, 0, 7);
+    target = clamp(target, RINK.goalX - 31, RINK.goalX + 31);
+    const challenge = puck.owner === null ? 0 : clamp((205 - puck.y) / 23, 0, 3);
+    const targetY = 87 + clamp((229 - puck.y) / 21, 0, 6) + challenge;
     const nextX = toward(goalie.x, target, settings.goalieSpeed * dt);
-    const nextY = toward(goalie.y, targetY, 46 * dt);
+    const nextY = toward(goalie.y, targetY, 56 * dt);
     goalie.vx = (nextX - goalie.x) / dt;
     goalie.vy = (nextY - goalie.y) / dt;
     goalie.x = nextX;
@@ -886,7 +909,7 @@ export class Game {
       puck.vx += (Math.sign(puck.x - RINK.goalX) || 1) * 94 * dt;
     }
     const speed = Math.hypot(puck.vx, puck.vy);
-    const friction = Math.max(0, 1 - dt * (0.33 + 18 / Math.max(speed, 18)));
+    const friction = Math.max(0, 1 - dt * (0.47 + 21 / Math.max(speed, 21)));
     puck.vx *= friction;
     puck.vy *= friction;
 
@@ -894,23 +917,25 @@ export class Game {
     this.collideNet(beforeX, beforeY);
     if (this.roundDelay > 0) return;
 
-    const impact = constrain(puck, PUCK_RADIUS, 0.77);
+    const impact = constrain(puck, PUCK_RADIUS, 0.68);
     if (impact > 39) this.emit('board', puck, { speed: impact });
     if (puck.shotBy !== null && (speed < 100 || (impact > 39 && puck.y < RINK.goalY + 19))) {
       this.miss();
     }
-    if (puck.pickupDelay > 0 || speed > 286 || puck.height > 10) return;
+    if (puck.pickupDelay > 0 || speed > 262 || puck.height > 10) return;
 
     let nearest = null;
-    let closestDistance = 23;
+    let closestDistance = Infinity;
     for (const skater of this.skaters) {
       if (skater.stun > 0 || skater.pickupCooldown > 0 || skater.ejection) continue;
+      const human = skater.id === this.humanId;
+      if (!human && speed > 237) continue;
       const front = face(skater);
       const distance = Math.min(
         Math.hypot(puck.x - skater.x, puck.y - skater.y),
         Math.hypot(puck.x - skater.x - front.x * 9, puck.y - skater.y - front.y * 9),
       );
-      if (distance >= closestDistance) continue;
+      if (distance >= (human ? 27 : 22) || distance >= closestDistance) continue;
       nearest = skater;
       closestDistance = distance;
     }
@@ -918,6 +943,7 @@ export class Game {
     puck.owner = nearest.id;
     puck.lastTouch = nearest.id;
     puck.shotBy = null;
+    puck.controlGrace = nearest.id === this.humanId ? 0.72 : 0.30;
     this.setStickPosition(nearest);
     this.addCharge(nearest, 0.03);
     this.emit('pickup', puck, { player: nearest.id });
@@ -942,10 +968,10 @@ export class Game {
 
     const side = normal.x || (this.random() < 0.5 ? -0.5 : 0.5);
     const rebound = unit(side * 1.18 + (this.random() - 0.5) * 0.5, Math.max(0.63, normal.y));
-    const speed = clamp(140 + Math.abs(arriving) * 0.34, 160, 322);
+    const speed = clamp(120 + Math.abs(arriving) * 0.32, 145, 263);
     puck.x = goalie.x + rebound.x * (width + 1);
     puck.y = goalie.y + rebound.y * (height + 4);
-    this.release(rebound.x * speed, rebound.y * speed, 0.15);
+    this.release(rebound.x * speed, rebound.y * speed, 0.24);
     goalie.action = 'save';
     goalie.actionTime = 0.32;
     if (save) this.emit('save', puck, { player, speed });

@@ -1,7 +1,10 @@
 import { RINK } from './game.mjs';
 
-const WIDTH = 574;
-const HEIGHT = 608;
+export const WORLD_WIDTH = 574;
+export const WORLD_HEIGHT = 446;
+const BENCH_GATE_Y = 289;
+const COACH_X = 471;
+const COACH_Y = 212;
 const ORANGE = '#ff632b';
 const TEAMS = [
   { jersey: '#f8f4e8', light: '#ffffff', seam: '#b9b9ae', trim: '#ed5428', text: '#232629', width: 1.06, height: 1.14 },
@@ -102,9 +105,8 @@ function drawRink(ctx) {
   const { left, right, top, bottom, goalX, goalY } = RINK;
   const w = right - left;
   const h = bottom - top;
-  const centerY = (top + bottom) / 2;
-  const upperBlue = top + h * .32;
-  const lowerBlue = top + h * .68;
+  const blueLine = top + h * .53;
+  const centerLine = bottom - 7;
   const ice = ctx.createLinearGradient(left, top, right, bottom);
   ice.addColorStop(0, '#d9e6ea');
   ice.addColorStop(.47, '#eff8f7');
@@ -133,27 +135,25 @@ function drawRink(ctx) {
   endShadow.addColorStop(1, '#7a92994d');
   rect(ctx, endShadow, left, top, w, h);
 
-  for (let n = 0; n < 32; n++) {
-    const y = top + n * 14.1;
+  for (let y = top; y < bottom + 20; y += 14.1) {
     line(ctx, [left, y], [right, y - 18], '#ffffff1f', 1);
   }
-  dotNoise(ctx, left, top, w, h, 650, '#6c9ba329', 96);
-  dotNoise(ctx, left, top, w, h, 350, '#ffffff99', 16);
+  dotNoise(ctx, left, top, w, h, 545, '#6c9ba329', 96);
+  dotNoise(ctx, left, top, w, h, 305, '#ffffff99', 16);
 
-  for (const y of [goalY, bottom - 33]) {
-    line(ctx, [left, y], [right, y], '#b95c60a6', 2);
-  }
-  for (const y of [upperBlue, lowerBlue]) {
-    line(ctx, [left, y], [right, y], '#417aa4af', 5);
-    line(ctx, [left, y - 1], [right, y - 1], '#8eb4d068', 1);
-  }
-  line(ctx, [left, centerY], [right, centerY], '#ae515b9f', 4);
+  line(ctx, [left, goalY], [right, goalY], '#b95c60a6', 2);
+  line(ctx, [left, blueLine], [right, blueLine], '#417aa4af', 5);
+  line(ctx, [left, blueLine - 1], [right, blueLine - 1], '#8eb4d068', 1);
+  ellipse(ctx, goalX, centerLine, 47, 47, '#eff8f32a', '#397faaa5', 2);
+  line(ctx, [left, centerLine], [right, centerLine], '#ae515b9f', 4);
   for (let x = left + 4; x < right; x += 10) {
-    shape(ctx, [[x, centerY], [x + 2, centerY - 2], [x + 5, centerY], [x + 2, centerY + 2]], '#edd2ce9f');
+    shape(ctx, [[x, centerLine], [x + 2, centerLine - 2], [x + 5, centerLine], [x + 2, centerLine + 2]], '#edd2ce9f');
   }
+  ellipse(ctx, goalX, centerLine, 4, 4, '#568aa9');
 
-  const circle = 38;
-  for (const [x, y] of [[goalX - 82, top + 92], [goalX + 82, top + 92], [goalX - 82, bottom - 92], [goalX + 82, bottom - 92]]) {
+  const circle = 39;
+  for (const x of [goalX - 83, goalX + 83]) {
+    const y = goalY + 68;
     ellipse(ctx, x, y, circle, circle, null, '#b4585fa5', 1.5);
     ellipse(ctx, x, y, 4.3, 4.3, '#b65d64');
     line(ctx, [x - 10, y - 4], [x - 10, y + 4], '#b65d646c');
@@ -163,16 +163,12 @@ function drawRink(ctx) {
         line(ctx, [x + offset * 13, y + side * 35], [x + offset * 15, y + side * 45], '#b4585fb5', 1.6);
       }
     }
+    ellipse(ctx, x, blueLine + 25, 3, 3, '#bb6468a8');
   }
-  for (const y of [upperBlue + 23, lowerBlue - 23]) {
-    for (const x of [goalX - 82, goalX + 82]) ellipse(ctx, x, y, 3, 3, '#bb6468a8');
-  }
-  ellipse(ctx, goalX, centerY, 48, 48, '#eff8f32a', '#397faaa5', 2);
-  ellipse(ctx, goalX, centerY, 4, 4, '#568aa9');
   ctx.save();
-  ctx.translate(goalX, centerY);
+  ctx.translate(goalX, blueLine + 70);
   ctx.rotate(-.10);
-  label(ctx, '3', 0, 1, { size: 65, color: '#65899a2d', weight: 900, align: 'center', font: 'Arial, sans-serif' });
+  label(ctx, '3', 0, 1, { size: 68, color: '#65899a2d', weight: 900, align: 'center', font: 'Arial, sans-serif' });
   ctx.restore();
 
   ctx.beginPath();
@@ -186,7 +182,7 @@ function drawRink(ctx) {
 
   ctx.restore();
 
-  for (const y of [80, 138, 196, 254, 312, 370, 428, 486, 544]) {
+  for (let y = top + 41; y < bottom - 27; y += 58) {
     rect(ctx, '#585f5d', left - 9, y, 2.3, 3);
     rect(ctx, '#f5ead1', left - 6.6, y, 2, 3);
     rect(ctx, '#585f5d', right + 6, y, 2.3, 3);
@@ -196,24 +192,25 @@ function drawRink(ctx) {
     rect(ctx, '#626463', x, top - 8, 2, 4);
     rect(ctx, '#626463', x, bottom + 4, 2, 4);
   }
-  for (const y of [349, 385]) {
+  for (const y of [BENCH_GATE_Y - 18, BENCH_GATE_Y + 18]) {
     line(ctx, [right + 1, y], [right + 9, y], '#484944', 1.4);
   }
-  line(ctx, [right + 7, 352], [right + 7, 381], '#f0e6ca', .8);
+  line(ctx, [right + 7, BENCH_GATE_Y - 15], [right + 7, BENCH_GATE_Y + 14], '#f0e6ca', .8);
 }
 
 function drawOpenBenchGate(ctx) {
   const x = RINK.right;
-  rect(ctx, '#383631', x + 1, 350, 16, 34);
-  rect(ctx, '#767065', x + 1, 350, 7, 34);
-  rect(ctx, '#979d97', x - 1, 354, 3, 25);
-  for (const y of [355, 360, 365, 370, 375, 380]) {
-    line(ctx, [x + 3, y], [x + 8, y], '#4c4b44', .85);
+  const y = BENCH_GATE_Y;
+  rect(ctx, '#383631', x + 1, y - 17, 16, 34);
+  rect(ctx, '#767065', x + 1, y - 17, 7, 34);
+  rect(ctx, '#979d97', x - 1, y - 13, 3, 25);
+  for (let rib = y - 12; rib <= y + 13; rib += 5) {
+    line(ctx, [x + 3, rib], [x + 8, rib], '#4c4b44', .85);
   }
-  line(ctx, [x + 1, 384.3], [x + 31, 384.3], '#161718', 5.4);
-  line(ctx, [x + 1, 383.3], [x + 30, 383.3], '#d9d5c2', 3);
-  line(ctx, [x + 4, 384.1], [x + 29, 384.1], '#da9a63', .9);
-  ellipse(ctx, x + 4, 383.5, 1.5, 1.5, '#535552');
+  line(ctx, [x + 1, y + 17.3], [x + 31, y + 17.3], '#161718', 5.4);
+  line(ctx, [x + 1, y + 16.3], [x + 30, y + 16.3], '#d9d5c2', 3);
+  line(ctx, [x + 4, y + 17.1], [x + 29, y + 17.1], '#da9a63', .9);
+  ellipse(ctx, x + 4, y + 16.5, 1.5, 1.5, '#535552');
 }
 
 function drawNet(ctx) {
@@ -244,25 +241,25 @@ function drawNet(ctx) {
 }
 
 function drawFacility(ctx) {
-  const floor = ctx.createLinearGradient(0, 0, WIDTH, HEIGHT);
+  const floor = ctx.createLinearGradient(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
   floor.addColorStop(0, '#211f1d');
   floor.addColorStop(.45, '#343330');
   floor.addColorStop(1, '#26201c');
-  rect(ctx, floor, 0, 0, WIDTH, HEIGHT);
-  for (let y = 13; y < HEIGHT; y += 29) line(ctx, [0, y], [WIDTH, y], '#0d0e0f35', 1);
+  rect(ctx, floor, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+  for (let y = 13; y < WORLD_HEIGHT; y += 29) line(ctx, [0, y], [WORLD_WIDTH, y], '#0d0e0f35', 1);
   for (const x of [37, 70, 449, 538]) {
-    rect(ctx, '#121210', x, 0, 3, HEIGHT);
-    rect(ctx, '#7162534d', x + 3, 0, 1, HEIGHT);
+    rect(ctx, '#121210', x, 0, 3, WORLD_HEIGHT);
+    rect(ctx, '#7162534d', x + 3, 0, 1, WORLD_HEIGHT);
   }
-  dotNoise(ctx, 0, 0, WIDTH, HEIGHT, 1500, '#e2b39128', 820);
-  dotNoise(ctx, 0, 0, WIDTH, HEIGHT, 1200, '#05050538', 518);
+  dotNoise(ctx, 0, 0, WORLD_WIDTH, WORLD_HEIGHT, 1100, '#e2b39128', 820);
+  dotNoise(ctx, 0, 0, WORLD_WIDTH, WORLD_HEIGHT, 900, '#05050538', 518);
 
-  for (const y of [36, 249, 465]) {
-    roundRect(ctx, 36, y, 28, 106, 3, '#383330', '#574139');
-    rect(ctx, '#201e1c', 41, y + 4, 18, 95);
-    for (let n = y + 7; n < y + 99; n += 8) rect(ctx, '#63534a', 41, n, 18, 1);
+  for (const y of [38, 247]) {
+    roundRect(ctx, 36, y, 28, 97, 3, '#383330', '#574139');
+    rect(ctx, '#201e1c', 41, y + 4, 18, 87);
+    for (let n = y + 7; n < y + 92; n += 8) rect(ctx, '#63534a', 41, n, 18, 1);
   }
-  for (const y of [153, 392]) {
+  for (const y of [149, 357]) {
     rect(ctx, '#181615', 45, y, 31, 61);
     for (let n = 0; n < 8; n++) {
       shape(ctx, [[50, y + 6 + n * 7], [54, y + 3 + n * 7], [70, y + 3 + n * 7], [66, y + 6 + n * 7]], '#a95230aa');
@@ -272,44 +269,44 @@ function drawFacility(ctx) {
   bench.addColorStop(0, '#2c2926');
   bench.addColorStop(.75, '#504033');
   bench.addColorStop(1, '#29241f');
-  roundRect(ctx, 444, 222, 97, 205, 6, '#151411', '#696056', 1.5);
-  roundRect(ctx, 449, 230, 86, 189, 3, bench);
-  for (let y = 231; y < 419; y += 9) {
+  roundRect(ctx, 444, 144, 97, 205, 6, '#151411', '#696056', 1.5);
+  roundRect(ctx, 449, 152, 86, 189, 3, bench);
+  for (let y = 153; y < 341; y += 9) {
     line(ctx, [449, y], [535, y], '#1817146d');
     line(ctx, [449, y + 1], [535, y + 1], '#98745828');
   }
-  roundRect(ctx, 492, 251, 33, 151, 2, '#1f1a16');
-  roundRect(ctx, 489, 247, 33, 151, 2, '#8a5336', '#1e1816', 1.5);
-  rect(ctx, '#bc7552', 491, 251, 2, 145);
-  rect(ctx, '#75432f', 504, 249, 2, 148);
-  rect(ctx, '#603c2a', 518, 249, 3, 147);
-  for (const y of [268, 288, 307, 331, 352, 374, 393]) line(ctx, [492, y], [520, y], '#d4905e77');
-  roundRect(ctx, 458, 394, 24, 13, 2, '#ad5737', '#2b211c');
-  rect(ctx, '#e8ae79', 460, 396, 19, 2);
+  roundRect(ctx, 492, 173, 33, 151, 2, '#1f1a16');
+  roundRect(ctx, 489, 169, 33, 151, 2, '#8a5336', '#1e1816', 1.5);
+  rect(ctx, '#bc7552', 491, 173, 2, 145);
+  rect(ctx, '#75432f', 504, 171, 2, 148);
+  rect(ctx, '#603c2a', 518, 171, 3, 147);
+  for (const y of [190, 210, 229, 253, 274, 296, 315]) line(ctx, [492, y], [520, y], '#d4905e77');
+  roundRect(ctx, 458, 316, 24, 13, 2, '#ad5737', '#2b211c');
+  rect(ctx, '#e8ae79', 460, 318, 19, 2);
   for (let n = 0; n < 3; n++) {
     const x = 502 + n * 6;
-    roundRect(ctx, x, 252 + (n % 2) * 4, 4, 12, 1, n === 1 ? '#d9b17e' : '#797d75');
-    rect(ctx, '#c96844', x, 251 + (n % 2) * 4, 4, 2);
+    roundRect(ctx, x, 174 + (n % 2) * 4, 4, 12, 1, n === 1 ? '#d9b17e' : '#797d75');
+    rect(ctx, '#c96844', x, 173 + (n % 2) * 4, 4, 2);
   }
-  rect(ctx, '#47403a', 535, 234, 7, 179);
-  rect(ctx, '#bc8c66', 536, 234, 1, 179);
-  roundRect(ctx, 455, 132, 78, 31, 2, '#1d1b18', '#70614f');
-  rect(ctx, '#ae4f2a', 460, 137, 3, 21);
-  label(ctx, 'BENCH', 498, 148, { align: 'center', size: 12, color: '#ded1ba', weight: 900 });
+  rect(ctx, '#47403a', 535, 156, 7, 179);
+  rect(ctx, '#bc8c66', 536, 156, 1, 179);
+  roundRect(ctx, 455, 88, 78, 31, 2, '#1d1b18', '#70614f');
+  rect(ctx, '#ae4f2a', 460, 93, 3, 21);
+  label(ctx, 'BENCH', 498, 104, { align: 'center', size: 12, color: '#ded1ba', weight: 900 });
 
-  for (const y of [452, 542]) {
+  for (const y of [367, 398]) {
     roundRect(ctx, 466, y, 59, 18, 2, '#2c2824', '#756054');
     for (let x = 472; x < 520; x += 6) line(ctx, [x, y + 5], [x, y + 13], '#8c7662');
   }
-  const light = ctx.createRadialGradient(268, 283, 144, 268, 283, 360);
+  const light = ctx.createRadialGradient(268, 221, 144, 268, 221, 310);
   light.addColorStop(0, '#00000000');
   light.addColorStop(1, '#0b09095c');
-  rect(ctx, light, 0, 0, WIDTH, HEIGHT);
+  rect(ctx, light, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 }
 
 function drawCoach(ctx, time, speech, throwAge = Infinity) {
   ctx.save();
-  ctx.translate(471, 292);
+  ctx.translate(COACH_X, COACH_Y);
   const pulse = speech ? Math.sin(time * 15) : Math.sin(time * 3) * .13;
   const throwing = throwAge < .44;
   const posedThrow = Math.sin(Math.PI * Math.min(1, throwAge / .44));
@@ -351,7 +348,7 @@ function drawCoach(ctx, time, speech, throwAge = Infinity) {
   line(ctx, [-11, -3], [-5, -3], speech ? '#42251f' : '#82513e', speech ? 2.7 : 1.1);
   line(ctx, [-5, -25], [1, -25], '#f3c49d', 1);
   ctx.restore();
-  label(ctx, 'COACH', 472, 334, { align: 'center', color: '#e8c8af', size: 8, weight: 900 });
+  label(ctx, 'COACH', COACH_X + 1, COACH_Y + 42, { align: 'center', color: '#e8c8af', size: 8, weight: 900 });
 }
 
 function drawManager(ctx, manager, time) {
@@ -697,6 +694,98 @@ function drawEffects(ctx, effects) {
   }
 }
 
+function drawEscort(ctx, x, y, size, stride) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(size, size);
+  ellipse(ctx, 1, 17, 14, 5, '#080e16a3');
+  for (const side of [-1, 1]) {
+    const offset = side * stride;
+    roundRect(ctx, side * 4.6 - 3.2, 4 + offset, 6.4, 14, 1.7, '#272f36', '#54616a', .7);
+    line(ctx, [side * 4.6 - 3, 17 + offset], [side * 4.6 + 3, 17 + offset], '#c1ccd033', 1.3);
+  }
+  line(ctx, [12, 9], [14.5, -16], '#646970', 2.3);
+  line(ctx, [14.5, -16], [8, -18], '#7a858b', 2.3);
+  shape(ctx, [[-8, -8], [-3, -11], [4, -11], [10, -7], [14, 0], [10, 7], [-10, 7], [-14, 0]], '#323c44', '#6b7880', 1.1);
+  line(ctx, [-8, 4], [8, 4], '#c0cdd24f', 1);
+  ellipse(ctx, 0, -10, 5.8, 6.8, '#1f252c', '#83929a', 1);
+  line(ctx, [-3, -14], [2.5, -15.2], '#c7dbe173', 1);
+  ctx.restore();
+}
+
+function drawEntrance(ctx, skater, time, elapsed) {
+  const russian = skater.number === 39;
+  const escorts = skater.number === 24;
+  const x = 411;
+  const y = 220;
+  const slide = Math.max(0, 1 - elapsed / .58) ** 2;
+  const light = ctx.createRadialGradient(x, y, 16, x, y, 226);
+  light.addColorStop(0, russian ? '#643018f2' : escorts ? '#3e505cf2' : '#634929f2');
+  light.addColorStop(.55, russian ? '#301d16f7' : escorts ? '#242e36f7' : '#34291cf7');
+  light.addColorStop(1, '#111112f9');
+  rect(ctx, light, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
+  const sweep = Math.sin(time * 1.4) * 19;
+  const beam = ctx.createLinearGradient(0, 0, 0, y + 90);
+  beam.addColorStop(0, russian ? '#ff7e3245' : escorts ? '#d9e8fa3c' : '#ffe2a149');
+  beam.addColorStop(1, '#ffffff00');
+  shape(ctx, [[266, 0], [291, 0], [x + sweep + 76, y + 90], [x + sweep - 10, y + 90]], beam);
+  shape(ctx, [[532, 0], [559, 0], [x - sweep + 20, y + 90], [x - sweep - 75, y + 90]], beam);
+
+  const halo = russian ? '#ec632d' : escorts ? '#abc8d7' : '#eeb574';
+  ctx.save();
+  ctx.globalAlpha = .32;
+  ellipse(ctx, x, y + 91, 108, 18, '#110f10', halo, 1.35);
+  ellipse(ctx, x, y + 91, 86, 12.5, null, halo, .9);
+  ctx.restore();
+  const count = russian ? 30 : 18;
+  for (let index = 0; index < count; index++) {
+    const drift = (index * 17 + time * (russian ? 32 : 16)) % 190;
+    const px = 294 + (index * 67 % 267);
+    const py = y + 110 - drift;
+    ctx.globalAlpha = (.35 + Math.sin(index + time * 1.4) * .25) * (1 - drift / 210);
+    rect(ctx, halo, px, py, russian ? 2.8 : 1.6, 1.2);
+  }
+  ctx.globalAlpha = 1;
+
+  if (escorts) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, .45 + elapsed);
+    for (let rank = 0; rank < 3; rank++) {
+      const distance = 60 + rank * 14;
+      const formationY = y - 92 + rank * 45 + slide * 24;
+      for (const side of [-1, 1]) {
+        drawEscort(ctx, x + side * distance, formationY, 1.10 + rank * .13, Math.sin(time * 9 + rank + side) * 2.15);
+      }
+    }
+    ctx.restore();
+  }
+
+  const strideTime = Math.min(elapsed, 1);
+  const portrait = {
+    ...skater,
+    x: 0,
+    y: 0,
+    vx: 0,
+    vy: 0,
+    angle: -Math.PI / 2 + Math.sin(time * 1.7) * .055,
+    action: russian ? 'michigan' : escorts ? null : 'slapshot',
+    actionTime: russian ? .35 : .14 + Math.sin(time * 3) * .12,
+    stun: 0,
+    ejection: null,
+    specialCharge: 0,
+    departing: strideTime < .44,
+  };
+  const liftedPuck = russian ? { x: -9, y: -24, vx: 0, vy: 0, height: 3, owner: 2 } : null;
+  ctx.save();
+  ctx.translate(x, y + slide * 62 + Math.sin(time * 3) * 1.8);
+  const scale = russian ? 4.3 : 4.05;
+  ctx.scale(scale, scale);
+  drawSkater(ctx, portrait, time, liftedPuck, undefined, false);
+  if (liftedPuck) drawPuck(ctx, liftedPuck);
+  ctx.restore();
+}
+
 export class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -704,13 +793,13 @@ export class Renderer {
     this.backdrop = document.createElement('canvas');
   }
 
-  draw(game, { time = 0, coach = null, effects = [] } = {}) {
+  draw(game, { time = 0, coach = null, effects = [], entrance = null } = {}) {
     const { canvas, ctx, backdrop } = this;
     if (backdrop.width !== canvas.width || backdrop.height !== canvas.height || !this.backdropReady) {
       backdrop.width = canvas.width;
       backdrop.height = canvas.height;
       const background = backdrop.getContext('2d', { alpha: false });
-      background.setTransform(backdrop.width / WIDTH, 0, 0, backdrop.height / HEIGHT, 0, 0);
+      background.setTransform(backdrop.width / WORLD_WIDTH, 0, 0, backdrop.height / WORLD_HEIGHT, 0, 0);
       drawFacility(background);
       drawRink(background);
       drawNet(background);
@@ -718,7 +807,7 @@ export class Renderer {
     }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(backdrop, 0, 0);
-    ctx.setTransform(canvas.width / WIDTH, 0, 0, canvas.height / HEIGHT, 0, 0);
+    ctx.setTransform(canvas.width / WORLD_WIDTH, 0, 0, canvas.height / WORLD_HEIGHT, 0, 0);
     const orange = game.skaters[2];
     if (game.manager && orange.departing) drawOpenBenchGate(ctx);
     const shakeThrow = effects.findLast(({ type }) => type === 'shake-throw');
@@ -738,5 +827,9 @@ export class Renderer {
     if (game.manager) drawManager(ctx, game.manager, time);
     if (game.shake) drawShake(ctx, game.shake);
     drawEffects(ctx, effects);
+    if (entrance) {
+      const entrant = game.skaters.find((skater) => entrance.number == null ? skater.id === entrance.id : skater.number === entrance.number);
+      if (entrant) drawEntrance(ctx, entrant, time, entrance.elapsed ?? 1);
+    }
   }
 }

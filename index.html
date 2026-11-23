@@ -21,7 +21,7 @@
         <button class="utility" id="sound-quick" type="button" aria-pressed="true" aria-label="Sound">
           <span class="sound-icon" aria-hidden="true"></span><span class="utility-label">Sound</span>
         </button>
-        <button class="utility" id="fullscreen-quick" type="button" aria-label="Fullscreen" aria-pressed="false">
+        <button class="utility fullscreen-quick" id="fullscreen-quick" type="button" aria-label="Fullscreen" aria-pressed="false">
           <span class="fullscreen-icon" aria-hidden="true"></span><span class="utility-label">Fullscreen</span>
         </button>
         <button class="utility pause-quick" id="pause-quick" type="button" aria-label="Pause practice" hidden>
@@ -39,9 +39,9 @@
         <fieldset class="roster-select">
           <legend>Choose your skater</legend>
           <div class="roster-options">
-            <label><input type="radio" name="skater" value="0" checked><span><i class="jersey jersey-0" aria-hidden="true"></i><strong>#24</strong><small>Power</small></span></label>
-            <label><input type="radio" name="skater" value="1"><span><i class="jersey jersey-1" aria-hidden="true"></i><strong>#11</strong><small>Speed</small></span></label>
-            <label><input type="radio" name="skater" value="2"><span><i class="jersey jersey-2" aria-hidden="true"></i><strong>#39</strong><small>Race to 5</small></span></label>
+            <label><input type="radio" name="skater" value="0" checked><span><i class="jersey jersey-0" aria-hidden="true"></i><strong>#24</strong><small>SEAL Team 6</small></span></label>
+            <label><input type="radio" name="skater" value="1"><span><i class="jersey jersey-1" aria-hidden="true"></i><strong>#11</strong><small>Wingnut</small></span></label>
+            <label><input type="radio" name="skater" value="2"><span><i class="jersey jersey-2" aria-hidden="true"></i><strong>#39</strong><small>The Russian</small></span></label>
           </div>
         </fieldset>
         <div class="menu-actions">
@@ -96,11 +96,11 @@
 
       <section class="rink-panel" aria-label="Hockey rink">
         <div class="rink-header">
-          <span class="rink-label"><span class="rink-icon" aria-hidden="true"></span>Practice rink</span>
+          <span class="rink-label"><span class="rink-icon" aria-hidden="true"></span>Half-ice rink</span>
           <span class="rink-status" id="rink-status" data-state="ready"><i aria-hidden="true"></i><span>Ready</span></span>
         </div>
         <div class="rink-world" id="world">
-          <canvas id="ice" width="574" height="608" role="img" aria-label="Overhead practice rink with three skaters, a tall dark-grey goalie, a coach at the bench, and an orange mascot outside the boards"></canvas>
+          <canvas id="ice" width="574" height="446" role="img" aria-label="Overhead half-ice rink with three skaters, a tall dark-grey goalie, a coach at the bench, and an orange mascot outside the boards"></canvas>
           <div class="coach-call" id="coach-call" aria-hidden="true" hidden><span id="coach-text"></span></div>
           <div class="goal-call" id="goal-call" aria-hidden="true" hidden>
             <span>GOAL!</span>
@@ -113,6 +113,14 @@
             <strong>General manager</strong>
             <span>39, back to Russia. 44, you’re in.</span>
           </div>
+          <section class="entrance" id="entrance" aria-label="Player introductions" hidden>
+            <div class="entrance-banner" id="entrance-banner" aria-live="polite">
+              <span class="entrance-number" id="entrance-number"></span>
+              <h2 id="entrance-name"></h2>
+              <p id="entrance-detail"></p>
+            </div>
+            <button class="entrance-skip" id="skip-intro" type="button">Skip intros</button>
+          </section>
         </div>
         <div class="rink-footer" aria-label="Player uniforms">
           <span><i class="legend legend-0" aria-hidden="true"></i><span id="legend-label-0">#24 · You</span></span>
@@ -139,7 +147,7 @@
     </main>
 
     <footer class="footer">
-      <span>3 FOR ALL <i></i> V1.1</span>
+      <span>3 FOR ALL <i></i> V1.2</span>
       <span class="footer-input">Keyboard <i></i> Touchscreen</span>
     </footer>
   </div>
@@ -154,6 +162,7 @@
       <div><dt>Skate boost</dt><dd><kbd>Shift</kbd></dd></div>
       <div><dt>Special</dt><dd><kbd>L</kbd></dd></div>
       <div><dt>Pause</dt><dd><kbd>Esc</kbd></dd></div>
+      <div><dt>Fullscreen</dt><dd><kbd>F</kbd></dd></div>
     </dl>
     <p>Skate toward the net to aim. Shoot while skating diagonally to target that side of the goal.</p>
     <h3>Special moves</h3>

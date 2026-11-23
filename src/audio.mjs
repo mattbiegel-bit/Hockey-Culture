@@ -1,3 +1,18 @@
+const ENTRANCE_CUES = [
+  {
+    voice: 'triangle',
+    notes: [[0, 147], [0.16, 220], [0.32, 175], [0.51, 294]],
+  },
+  {
+    voice: 'sawtooth',
+    notes: [[0, 73], [0.12, 73], [0.29, 104], [0.50, 78], [0.63, 117]],
+  },
+  {
+    voice: 'square',
+    notes: [[0, 233], [0.11, 294], [0.29, 247], [0.46, 311], [0.63, 349]],
+  },
+];
+
 export class GameAudio {
   constructor() {
     this.enabled = true;
@@ -103,11 +118,42 @@ export class GameAudio {
     }
   }
 
+  entrance(player, time) {
+    const cue = ENTRANCE_CUES[player];
+    if (!cue) return;
+
+    for (const [index, [delay, frequency]] of cue.notes.entries()) {
+      const noteTime = time + delay;
+      const last = index === cue.notes.length - 1;
+      this.tone({
+        time: noteTime, duration: last ? 0.32 : 0.17, from: frequency, to: frequency * 0.985,
+        volume: last ? 0.24 : 0.16, type: cue.voice, attack: 0.013,
+      });
+      if (last || index % 2 === 0) {
+        this.tone({
+          time: noteTime, duration: last ? 0.26 : 0.14, from: frequency / 2, to: frequency / 2,
+          volume: 0.19, type: 'triangle', attack: 0.009,
+        });
+        this.noise({
+          time: noteTime, duration: 0.085, frequency: index === 0 ? 450 : 1920, volume: 0.20,
+        });
+      }
+    }
+  }
+
   event(event) {
     if (!this.ready) return;
     const time = this.context.currentTime + 0.004;
 
     switch (event.type) {
+      case 'entrance':
+        this.entrance(event.player, time);
+        break;
+      case 'faceoff':
+        this.tone({ time, duration: 0.19, from: 990, to: 1470, volume: 0.24, type: 'sine' });
+        this.noise({ time: time + 0.12, duration: 0.075, frequency: 1580, volume: 0.29 });
+        this.tone({ time: time + 0.13, duration: 0.08, from: 170, to: 89, volume: 0.22 });
+        break;
       case 'pickup':
         this.tone({ time, duration: 0.045, from: 510, to: 305, volume: 0.15 });
         break;
