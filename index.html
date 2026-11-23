@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#141311">
+  <meta name="description" content="Three skaters, one net. A free arcade hockey practice game for keyboard and touchscreen.">
+  <title>3 FOR ALL — Hockey Practice</title>
+  <link rel="icon" href="./assets/favicon.png" type="image/png">
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./src/main.mjs"></script>
+</head>
+<body>
+  <div class="app" id="app" data-screen="menu">
+    <header class="topbar">
+      <div class="wordmark" aria-label="Phylers Culture">
+        <span class="brand-icon" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>Phylers Culture</span>
+      </div>
+      <div class="topbar-tools">
+        <button class="utility" id="sound-quick" type="button" aria-pressed="true" aria-label="Sound">
+          <span class="sound-icon" aria-hidden="true"></span><span class="utility-label">Sound</span>
+        </button>
+        <button class="utility" id="fullscreen-quick" type="button" aria-label="Fullscreen" aria-pressed="false">
+          <span class="fullscreen-icon" aria-hidden="true"></span><span class="utility-label">Fullscreen</span>
+        </button>
+        <button class="utility pause-quick" id="pause-quick" type="button" aria-label="Pause practice" hidden>
+          <span class="pause-icon" aria-hidden="true"></span><span class="utility-label">Pause</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="menu-panel" id="menu" aria-labelledby="game-title">
+        <p class="eyebrow">Hockey Practice</p>
+        <h1 id="game-title"><span>3</span> FOR<br> ALL</h1>
+        <p class="lead">Three skaters. One net.</p>
+        <p class="intro">Win the puck, charge your special, and outscore both rivals.</p>
+        <fieldset class="roster-select">
+          <legend>Choose your skater</legend>
+          <div class="roster-options">
+            <label><input type="radio" name="skater" value="0" checked><span><i class="jersey jersey-0" aria-hidden="true"></i><strong>#24</strong><small>Power</small></span></label>
+            <label><input type="radio" name="skater" value="1"><span><i class="jersey jersey-1" aria-hidden="true"></i><strong>#11</strong><small>Speed</small></span></label>
+            <label><input type="radio" name="skater" value="2"><span><i class="jersey jersey-2" aria-hidden="true"></i><strong>#39</strong><small>Race to 5</small></span></label>
+          </div>
+        </fieldset>
+        <div class="menu-actions">
+          <button class="button primary" id="play" type="button"><span class="play-icon" aria-hidden="true"></span>Play Practice</button>
+          <div class="secondary-actions">
+            <button class="button secondary" id="open-controls" type="button">Controls</button>
+            <button class="button secondary" id="open-settings" type="button">Settings</button>
+          </div>
+        </div>
+        <div class="menu-meta">
+          <span><span class="clock-icon" aria-hidden="true"></span><span id="mode-tag">3-minute competition</span></span>
+          <span id="difficulty-tag">Normal AI</span>
+        </div>
+      </section>
+
+      <section class="hud" id="hud" aria-labelledby="score-heading" hidden>
+        <p class="eyebrow" id="practice-mode">Practice competition</p>
+        <div class="clock" id="clock" aria-label="3 minutes remaining">3:00</div>
+        <div class="clock-caption" id="clock-caption">Time remaining</div>
+        <h2 class="score-heading" id="score-heading">Scoreboard <small>Boost charge</small></h2>
+        <div class="scoreboard">
+          <div class="score-row" data-player="0">
+            <span class="jersey jersey-0" aria-hidden="true"></span>
+            <span class="score-detail">
+              <span class="score-name"><span class="player-number">#24</span> <small class="player-role">You</small><small class="charge-ready">Ready</small></span>
+              <meter id="charge-0" class="charge" min="0" max="100" value="0" aria-label="Number 24 boost charge"></meter>
+            </span>
+            <strong class="score-number" id="score-0">0</strong>
+          </div>
+          <div class="score-row" data-player="1">
+            <span class="jersey jersey-1" aria-hidden="true"></span>
+            <span class="score-detail">
+              <span class="score-name"><span class="player-number">#11</span> <small class="player-role">AI</small><small class="charge-ready">Ready</small></span>
+              <meter id="charge-1" class="charge" min="0" max="100" value="0" aria-label="Number 11 boost charge"></meter>
+            </span>
+            <strong class="score-number" id="score-1">0</strong>
+          </div>
+          <div class="score-row" data-player="2">
+            <span class="jersey jersey-2" aria-hidden="true"></span>
+            <span class="score-detail">
+              <span class="score-name"><span class="player-number">#39</span> <small class="player-role">AI</small><small class="charge-ready">Ready</small></span>
+              <meter id="charge-2" class="charge" min="0" max="100" value="0" aria-label="Number 39 boost charge"></meter>
+            </span>
+            <strong class="score-number" id="score-2">0</strong>
+          </div>
+        </div>
+        <div class="match-tools">
+          <button class="button secondary" id="pause" type="button"><span class="pause-icon" aria-hidden="true"></span>Pause</button>
+          <span class="key-hint" id="special-hint"><kbd>L</kbd> <span>Edge Burst</span></span>
+        </div>
+      </section>
+
+      <section class="rink-panel" aria-label="Hockey rink">
+        <div class="rink-header">
+          <span class="rink-label"><span class="rink-icon" aria-hidden="true"></span>Practice rink</span>
+          <span class="rink-status" id="rink-status" data-state="ready"><i aria-hidden="true"></i><span>Ready</span></span>
+        </div>
+        <div class="rink-world" id="world">
+          <canvas id="ice" width="574" height="608" role="img" aria-label="Overhead practice rink with three skaters, a tall dark-grey goalie, a coach at the bench, and an orange mascot outside the boards"></canvas>
+          <div class="coach-call" id="coach-call" aria-hidden="true" hidden><span id="coach-text"></span></div>
+          <div class="goal-call" id="goal-call" aria-hidden="true" hidden>
+            <span>GOAL!</span>
+            <small id="goal-player"></small>
+          </div>
+          <div class="rival-call" id="rival-call-0" aria-hidden="true" hidden>Selfish.</div>
+          <div class="rival-call" id="rival-call-1" aria-hidden="true" hidden>So selfish.</div>
+          <div class="move-call" id="move-call" aria-hidden="true" hidden></div>
+          <div class="gm-call rival-call" id="gm-call" aria-hidden="true" hidden>
+            <strong>General manager</strong>
+            <span>39, back to Russia. 44, you’re in.</span>
+          </div>
+        </div>
+        <div class="rink-footer" aria-label="Player uniforms">
+          <span><i class="legend legend-0" aria-hidden="true"></i><span id="legend-label-0">#24 · You</span></span>
+          <span><i class="legend legend-1" aria-hidden="true"></i><span id="legend-label-1">#11</span></span>
+          <span><i class="legend legend-2" aria-hidden="true"></i><span id="legend-label-2">#39</span></span>
+        </div>
+      </section>
+
+      <div class="stick-zone" id="stick-zone" hidden>
+        <div class="joystick" id="joystick" aria-label="Skate joystick">
+          <span class="stick-axis stick-axis-x" aria-hidden="true"></span>
+          <span class="stick-axis stick-axis-y" aria-hidden="true"></span>
+          <div class="stick-knob" id="knob"></div>
+        </div>
+        <span class="touch-label" aria-hidden="true">Skate</span>
+      </div>
+      <div class="action-pad" id="action-pad" hidden aria-label="Touch actions">
+        <button class="touch-action shoot" id="touch-shoot" type="button">Shoot</button>
+        <button class="touch-action poke" id="touch-poke" type="button" aria-label="Poke check">Poke</button>
+        <button class="touch-action check" id="touch-check" type="button" aria-label="Body check">Check</button>
+        <button class="touch-action sprint" id="touch-sprint" type="button">Boost</button>
+        <button class="touch-action special" id="touch-special" type="button" aria-disabled="true">Special</button>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <span>3 FOR ALL <i></i> V1.1</span>
+      <span class="footer-input">Keyboard <i></i> Touchscreen</span>
+    </footer>
+  </div>
+
+  <dialog class="dialog" id="controls-dialog" aria-labelledby="controls-title">
+    <div class="dialog-top"><h2 id="controls-title">Controls</h2><button class="close-button" data-close="controls-dialog" type="button" aria-label="Close controls">×</button></div>
+    <dl class="controls-list">
+      <div><dt>Skate</dt><dd><kbd>WASD</kbd> or <kbd>↑ ↓ ← →</kbd></dd></div>
+      <div><dt>Shoot</dt><dd><kbd>Space</kbd></dd></div>
+      <div><dt>Poke check</dt><dd><kbd>J</kbd></dd></div>
+      <div><dt>Body check</dt><dd><kbd>K</kbd></dd></div>
+      <div><dt>Skate boost</dt><dd><kbd>Shift</kbd></dd></div>
+      <div><dt>Special</dt><dd><kbd>L</kbd></dd></div>
+      <div><dt>Pause</dt><dd><kbd>Esc</kbd></dd></div>
+    </dl>
+    <p>Skate toward the net to aim. Shoot while skating diagonally to target that side of the goal.</p>
+    <h3>Special moves</h3>
+    <p>Charge builds during play. Pickups and successful checks fill it faster. With a full meter and the puck, use <strong>Edge Burst</strong> as #24 or fire a charged <strong>Slapshot</strong> as #11.</p>
+    <p>As #39, use <kbd>L</kbd> or Special to lift the puck for a <strong>Michigan</strong>, then use <kbd>Space</kbd> or Throw to fling it at the net.</p>
+    <h3>Touchscreen</h3>
+    <p>Hold the joystick to skate and tap Shoot, Poke, Check, or Special with the other hand. Hold Boost to skate faster. Landscape gives your thumbs more room.</p>
+    <button class="button primary dialog-action" data-close="controls-dialog" type="button">Back to Menu</button>
+  </dialog>
+
+  <dialog class="dialog" id="settings-dialog" aria-labelledby="settings-title">
+    <div class="dialog-top"><h2 id="settings-title">Settings</h2><button class="close-button" data-close="settings-dialog" type="button" aria-label="Close settings">×</button></div>
+    <fieldset class="difficulty">
+      <legend>AI difficulty</legend>
+      <div class="segment">
+        <label><input type="radio" name="difficulty" value="easy"><span>Easy</span></label>
+        <label><input type="radio" name="difficulty" value="normal"><span>Normal</span></label>
+        <label><input type="radio" name="difficulty" value="hard"><span>Hard</span></label>
+      </div>
+    </fieldset>
+    <div class="setting-row"><span>Sound</span><button class="switch" id="sound-setting" type="button" role="switch" aria-label="Sound" aria-checked="true"></button></div>
+    <div class="setting-row"><span>Fullscreen</span><button class="switch" id="fullscreen-setting" type="button" role="switch" aria-label="Fullscreen" aria-checked="false"></button></div>
+    <p class="setting-note" id="fullscreen-note" hidden>Fullscreen is unavailable in this browser window.</p>
+    <button class="button primary dialog-action" data-close="settings-dialog" type="button">Done</button>
+  </dialog>
+
+  <dialog class="dialog" id="pause-dialog" aria-labelledby="pause-title">
+    <div class="dialog-top"><h2 id="pause-title">Practice paused</h2></div>
+    <div class="dialog-buttons">
+      <button class="button primary" id="resume" type="button">Resume</button>
+      <button class="button secondary" id="restart" type="button">Restart Practice</button>
+      <button class="button secondary" id="pause-menu" type="button">Main Menu</button>
+    </div>
+  </dialog>
+
+  <dialog class="dialog" id="results-dialog" aria-labelledby="results-title">
+    <p class="eyebrow">Final standings</p>
+    <div class="dialog-top"><h2 id="results-title"></h2></div>
+    <ol class="rankings" id="rankings"></ol>
+    <div class="dialog-buttons">
+      <button class="button primary" id="again" type="button">Play Again</button>
+      <button class="button secondary" id="results-menu" type="button">Main Menu</button>
+    </div>
+  </dialog>
+  <div class="sr-only" id="announcement" aria-live="polite"></div>
+</body>
+</html>
